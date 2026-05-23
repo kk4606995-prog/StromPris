@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strømpriser Norge – Live</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+      --bg:      #080b10;
+      --surface: #0f1318;
+      --card:    #141920;
+      --border:  #1e2530;
+      --text:    #dde3ed;
+      --muted:   #5a6478;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+      padding: 36px 20px 60px;
+    }
+
+    .header {
+      max-width: 980px; margin: 0 auto 28px;
+      display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    }
+    .header h1 { font-size: clamp(1.4rem, 3.5vw, 2rem); font-weight: 600; letter-spacing: -0.03em; }
+    .header p { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+    .live-badge {
+      display: flex; align-items: center; gap: 7px;
+      background: #0f2518; border: 1px solid #1a4030; border-radius: 20px;
+      padding: 5px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: #34d399;
+    }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.85)} }
+
+    .tabs {
+      max-width: 980px; margin: 0 auto 20px;
+      display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 4px; width: fit-content;
+    }
+    .tab {
+      padding: 7px 18px; border-radius: 5px; border: none; background: transparent;
+      color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; cursor: pointer; transition: all .18s;
+    }
+    .tab.active { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+    .tab:hover:not(.active) { color: var(--text); }
+
+    .zone-row { max-width: 980px; margin: 0 auto 22px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .zone-btn {
+      padding: 7px 16px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--muted); font-family: 'JetBrains Mono', monospace;
+      font-size: 0.74rem; cursor: pointer; transition: all .18s; position: relative;
+    }
+    .zone-btn::after {
+      content:''; position:absolute; bottom:-1px; left:12px; right:12px;
+      height:2px; border-radius:2px; background:var(--zc,#888); transform:scaleX(0); transition:transform .2s;
+    }
+    .zone-btn.on { color:var(--text); border-color:var(--zc,#888); background:color-mix(in srgb,var(--zc,#888) 8%,var(--surface)); }
+    .zone-btn.on::after { transform:scaleX(1); }
+    .zone-btn:hover { color:var(--text); }
+
+    .stat-grid { max-width: 980px; margin: 0 auto 22px; display: grid; grid-template-columns: repeat(auto-fill,minmax(170px,1fr)); gap: 10px; }
+    .stat-card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px 16px; transition:opacity .3s; }
+    .stat-card.dimmed { opacity:.28; }
+    .zone-label { font-family:'JetBrains Mono',monospace; font-size:.7rem; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+    .zdot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .stat-price { font-size:1.4rem; font-weight:600; letter-spacing:-.03em; line-height:1; }
+    .stat-sub { font-size:.65rem; color:var(--muted); font-family:'JetBrains Mono',monospace; margin-top:4px; line-height:1.6; }
+
+    .chart-wrap { max-width:980px; margin:0 auto; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:28px 18px 20px; }
+    canvas { width:100%!important; display:block; }
+
+    .legend { max-width:980px; margin:16px auto 0; display:flex; flex-wrap:wrap; gap:16px; justify-content:center; }
+    .leg-item { display:flex; align-items:center; gap:7px; font-size:.73rem; color:var(--muted); cursor:pointer; transition:color .15s; }
+    .leg-item.on { color:var(--text); }
+    .leg-dot { width:9px; height:9px; border-radius:50%; }
+
+    .status { max-width:980px; margin:0 auto 18px; font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--muted); min-height:18px; }
+    .status.err { color:#f87171; }
+
+    #tooltip {
+      position:fixed; background:#1a2030; border:1px solid #2a3345; border-radius:7px;
+      padding:10px 14px; font-family:'JetBrains Mono',monospace; font-size:.72rem;
+      pointer-events:none; opacity:0; z-index:200; transition:opacity .12s; min-width:150px;
+    }
+    #tooltip.show { opacity:1; }
+    .tt-head { color:var(--muted); margin-bottom:7px; font-size:.67rem; text-transform:uppercase; letter-spacing:.06em; }
+    .tt-row { display:flex; justify-content:space-between; gap:14px; margin-top:3px; align-items:center; }
+    .tt-name { display:flex; align-items:center; gap:6px; }
+    .tt-d { width:7px; height:7px; border-radius:50%; }
+    .tt-val { color:var(--text); font-weight:500; }
+
+    footer { max-width:980px; margin:28px auto 0; font-size:.68rem; color:var(--muted); font-family:'JetBrains Mono',monospace; text-align:center; }
+    footer a { color:var(--muted); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Strømpriser Norge</h1>
+    <p id="subtitle">Laster data…</p>
+  </div>
+  <div class="live-badge"><span class="live-dot"></span>LIVE · hvakosterstrommen.no</div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-view="today">I dag</button>
+  <button class="tab" data-view="week">7 dager</button>
+</div>
+
+<div class="zone-row" id="zoneRow"></div>
+<div class="status" id="status"></div>
+<div class="stat-grid" id="statGrid"></div>
+
+<div class="chart-wrap">
+  <canvas id="chart"></canvas>
+</div>
+<div class="legend" id="legend"></div>
+<div id="tooltip"></div>
+
+<footer>
+  Data levert av <a href="https://www.hvakosterstrommen.no/strompris-api" target="_blank">hvakosterstrommen.no</a>
+  &nbsp;·&nbsp; Spotpris ekskl. MVA og nettleie &nbsp;·&nbsp; Automatisk oppdatering hvert 5. min
+</footer>
+
+<script>
+const ZONES = [
+  { id:'NO1', short:'Øst-Norge',  color:'#f87171' },
+  { id:'NO2', short:'Sør-Norge',  color:'#34d399' },
+  { id:'NO3', short:'Midt-Norge', color:'#fbbf24' },
+  { id:'NO4', short:'Nord-Norge', color:'#60a5fa' },
+  { id:'NO5', short:'Vest-Norge', color:'#c084fc' },
+];
+
+let activeZones = new Set(ZONES.map(z => z.id));
+let currentView = 'today';
+let allData = {};   // { NO1: [{t, nok}, ...], ... }
+let hoverIdx = null;
+
+// ── API ──
+function apiUrl(dt, zoneId) {
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth()+1).padStart(2,'0');
+  const d = String(dt.getDate()).padStart(2,'0');
+  return `https://www.hvakosterstrommen.no/api/v1/prices/${y}/${m}-${d}_${zoneId}.json`;
+}
+
+async function fetchDay(dt, zoneId) {
+  const r = await fetch(apiUrl(dt, zoneId));
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+function daysAgo(n) {
+  const d = new Date(); d.setDate(d.getDate() - n); return d;
+}
+
+// ── LOAD ──
+async function loadToday() {
+  setStatus('Henter dagens priser…');
+  const dt = new Date();
+  allData = {};
+  const errs = [];
+  await Promise.all(ZONES.map(async z => {
+    try {
+      const rows = await fetchDay(dt, z.id);
+      allData[z.id] = rows.map(r => ({ t: r.time_start, nok: r.NOK_per_kWh }));
+    } catch(e) { errs.push(z.id); }
+  }));
+  setStatus(errs.length ? 'Feil ved henting: ' + errs.join(', ') : '', errs.length > 0);
+  updateSubtitle('i dag');
+  renderCards(); draw();
+}
+
+async function loadWeek() {
+  setStatus('Henter 7 dagers data…');
+  allData = {};
+  await Promise.all(ZONES.map(async z => {
+    const rows = [];
+    for (let i = 6; i >= 0; i--) {
+      try {
+        const day = await fetchDay(daysAgo(i), z.id);
+        rows.push(...day.map(r => ({ t: r.time_start, nok: r.NOK_per_kWh })));
+      } catch(e) { /* dag mangler */ }
+    }
+    allData[z.id] = rows;
+  }));
+  const noData = Object.values(allData).every(a => !a.length);
+  setStatus(noData ? 'Ingen data tilgjengelig' : '', noData);
+  updateSubtitle('siste 7 dager');
+  renderCards(); draw();
+}
+
+function setStatus(msg, isErr=false) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status' + (isErr ? ' err' : '');
+}
+
+function updateSubtitle(period) {
+  const t = new Date().toLocaleTimeString('no-NO', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('subtitle').textContent = `Spotpris ${period} · oppdatert ${t}`;
+}
+
+// ── ZONE BUTTONS ──
+function buildZoneRow() {
+  const row = document.getElementById('zoneRow');
+  const makeBtn = (label, id, color) => {
+    const b = document.createElement('button');
+    b.className = 'zone-btn on';
+    b.textContent = label;
+    b.dataset.id = id;
+    b.style.setProperty('--zc', color);
+    b.addEventListener('click', () => {
+      if (id === 'alle') {
+        activeZones = activeZones.size === ZONES.length
+          ? new Set([ZONES[0].id])
+          : new Set(ZONES.map(z => z.id));
+      } else {
+        if (activeZones.has(id)) { if (activeZones.size > 1) activeZones.delete(id); }
+        else activeZones.add(id);
+      }
+      syncUI(); renderCards(); draw();
+    });
+    return b;
+  };
+  row.appendChild(makeBtn('Alle soner', 'alle', '#dde3ed'));
+  ZONES.forEach(z => row.appendChild(makeBtn(z.id, z.id, z.color)));
+}
+
+function syncUI() {
+  const allOn = activeZones.size === ZONES.length;
+  document.querySelectorAll('.zone-btn').forEach(b => {
+    b.classList.toggle('on', b.dataset.id === 'alle' ? allOn : activeZones.has(b.dataset.id));
+  });
+  document.querySelectorAll('.leg-item').forEach(li => li.classList.toggle('on', activeZones.has(li.dataset.id)));
+}
+
+// ── STAT CARDS ──
+function renderCards() {
+  const grid = document.getElementById('statGrid');
+  grid.innerHTML = '';
+  ZONES.forEach(z => {
+    const rows = allData[z.id];
+    const card = document.createElement('div');
+    card.className = 'stat-card' + (activeZones.has(z.id) ? '' : ' dimmed');
+
+    let priceHtml = `<span style="color:var(--muted);font-size:.9rem">—</span>`;
+    let subHtml = '';
+
+    if (rows && rows.length) {
+      if (currentView === 'today') {
+        const hr = new Date().getHours();
+        const cur = rows.find(r => new Date(r.t).getHours() === hr);
+        if (cur) {
+          priceHtml = `<span style="color:${z.color}">${(cur.nok*100).toFixed(1)}</span>`;
+          const hi = Math.max(...rows.map(r=>r.nok*100)).toFixed(0);
+          const lo = Math.min(...rows.map(r=>r.nok*100)).toFixed(0);
+          subHtml = `øre/kWh nå<br>↑ ${hi} &nbsp; ↓ ${lo} øre`;
+        }
+      } else {
+        const avg = rows.reduce((s,r)=>s+r.nok,0)/rows.length;
+        priceHtml = `<span style="color:${z.color}">${(avg*100).toFixed(1)}</span>`;
+        subHtml = 'øre/kWh snitt (7d)';
+      }
+    }
+
+    card.innerHTML = `
+      <div class="zone-label">
+        <span class="zdot" style="background:${z.color}"></span>
+        <span style="color:${z.color}">${z.id}</span>
+        <span style="color:var(--muted)">${z.short}</span>
+      </div>
+      <div class="stat-price">${priceHtml}</div>
+      <div class="stat-sub">${subHtml}</div>`;
+    grid.appendChild(card);
+  });
+}
+
+// ── LEGEND ──
+function buildLegend() {
+  const leg = document.getElementById('legend');
+  ZONES.forEach(z => {
+    const item = document.createElement('div');
+    item.className = 'leg-item on'; item.dataset.id = z.id;
+    item.innerHTML = `<span class="leg-dot" style="background:${z.color}"></span>${z.id} – ${z.short}`;
+    item.addEventListener('click', () => {
+      if (activeZones.has(z.id)) { if (activeZones.size > 1) activeZones.delete(z.id); }
+      else activeZones.add(z.id);
+      syncUI(); renderCards(); draw();
+    });
+    leg.appendChild(item);
+  });
+}
+
+// ── CHART ──
+const canvas = document.getElementById('chart');
+const ctx = canvas.getContext('2d');
+const PAD = { top:16, right:24, bottom:44, left:56 };
+
+function draw() {
+  const visible = ZONES.filter(z => activeZones.has(z.id) && allData[z.id]?.length);
+  const DPR = devicePixelRatio || 1;
+  const W = canvas.parentElement.clientWidth - 36;
+  const H = Math.max(260, Math.min(400, W * 0.42));
+  canvas.width = W*DPR; canvas.height = H*DPR;
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
+  ctx.scale(DPR, DPR);
+  ctx.clearRect(0, 0, W, H);
+  if (!visible.length) return;
+
+  const pW = W - PAD.left - PAD.right;
+  const pH = H - PAD.top - PAD.bottom;
+  const labels = allData[visible[0].id].map(r => r.t);
+  const N = labels.length;
+  if (N < 2) return;
+
+  const vals = visible.flatMap(z => allData[z.id].map(r => r.nok*100));
+  const minV = Math.max(0, Math.floor(Math.min(...vals)/5)*5);
+  const maxV = Math.ceil(Math.max(...vals)/5)*5 + 5;
+
+  const xp = i => PAD.left + (i/(N-1))*pW;
+  const yp = v => PAD.top + pH - ((v-minV)/(maxV-minV))*pH;
+
+  ctx.font = `10px 'JetBrains Mono',monospace`;
+
+  // grid lines + y labels
+  for (let i = 0; i <= 5; i++) {
+    const v = minV + ((maxV-minV)/5)*i;
+    const y = yp(v);
+    ctx.beginPath(); ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+    ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left+pW, y); ctx.stroke();
+    ctx.fillStyle = '#5a6478'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(v), PAD.left-6, y+3.5);
+  }
+
+  // x labels
+  const step = Math.ceil(N / (currentView==='today' ? 12 : 7));
+  ctx.fillStyle = '#5a6478'; ctx.textAlign = 'center';
+  for (let i = 0; i < N; i += step) {
+    const dt = new Date(labels[i]);
+    const lbl = currentView==='today'
+      ? String(dt.getHours()).padStart(2,'0')+':00'
+      : `${dt.getDate()}/${dt.getMonth()+1}`;
+    ctx.fillText(lbl, xp(i), PAD.top+pH+28);
+  }
+
+  // areas + lines
+  visible.forEach(z => {
+    const pts = allData[z.id].map((r,i) => ({ x:xp(i), y:yp(r.nok*100) }));
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    pts.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(pts[pts.length-1].x, PAD.top+pH);
+    ctx.lineTo(pts[0].x, PAD.top+pH);
+    ctx.closePath();
+    ctx.fillStyle = z.color+'14'; ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    pts.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.strokeStyle = z.color; ctx.lineWidth = 1.8; ctx.lineJoin = 'round'; ctx.stroke();
+  });
+
+  // now-line (today only)
+  if (currentView === 'today') {
+    const hr = new Date().getHours();
+    const idx = allData[visible[0].id]?.findIndex(r => new Date(r.t).getHours() === hr);
+    if (idx >= 0) {
+      ctx.beginPath(); ctx.strokeStyle = 'rgba(255,255,255,0.16)'; ctx.lineWidth = 1;
+      ctx.setLineDash([3,4]); ctx.moveTo(xp(idx),PAD.top); ctx.lineTo(xp(idx),PAD.top+pH);
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+
+  // hover
+  if (hoverIdx !== null && hoverIdx >= 0 && hoverIdx < N) {
+    ctx.beginPath(); ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
+    ctx.moveTo(xp(hoverIdx),PAD.top); ctx.lineTo(xp(hoverIdx),PAD.top+pH); ctx.stroke();
+    visible.forEach(z => {
+      const r = allData[z.id][hoverIdx]; if (!r) return;
+      ctx.beginPath(); ctx.arc(xp(hoverIdx), yp(r.nok*100), 4.5, 0, Math.PI*2);
+      ctx.fillStyle = z.color; ctx.fill();
+      ctx.strokeStyle = '#080b10'; ctx.lineWidth = 1.5; ctx.stroke();
+    });
+  }
+}
+
+// tooltip
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const W = canvas.parentElement.clientWidth - 36;
+  const pW = W - PAD.left - PAD.right;
+  const visible = ZONES.filter(z => activeZones.has(z.id) && allData[z.id]?.length);
+  if (!visible.length) return;
+  const N = allData[visible[0].id].length;
+  const idx = Math.round(((mx-PAD.left)/pW)*(N-1));
+  hoverIdx = (idx>=0 && idx<N) ? idx : null;
+
+  const tt = document.getElementById('tooltip');
+  if (hoverIdx !== null) {
+    const dt = new Date(allData[visible[0].id][hoverIdx].t);
+    const lbl = currentView==='today'
+      ? `Kl. ${String(dt.getHours()).padStart(2,'0')}:00`
+      : `${dt.toLocaleDateString('no-NO',{day:'2-digit',month:'short'})} ${String(dt.getHours()).padStart(2,'0')}:00`;
+    let html = `<div class="tt-head">${lbl}</div>`;
+    visible.forEach(z => {
+      const r = allData[z.id][hoverIdx]; if (!r) return;
+      html += `<div class="tt-row">
+        <span class="tt-name"><span class="tt-d" style="background:${z.color}"></span>${z.id}</span>
+        <span class="tt-val">${(r.nok*100).toFixed(1)} øre</span>
+      </div>`;
+    });
+    tt.innerHTML = html; tt.classList.add('show');
+    tt.style.left = (e.clientX+16)+'px'; tt.style.top = (e.clientY-24)+'px';
+  } else { tt.classList.remove('show'); }
+  draw();
+});
+canvas.addEventListener('mouseleave', () => {
+  hoverIdx = null;
+  document.getElementById('tooltip').classList.remove('show');
+  draw();
+});
+
+// tabs
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentView = btn.dataset.view;
+    hoverIdx = null;
+    currentView === 'today' ? loadToday() : loadWeek();
+  });
+});
+
+window.addEventListener('resize', draw);
+
+// auto-refresh every 5 min
+setInterval(() => { currentView==='today' ? loadToday() : loadWeek(); }, 5*60*1000);
+
+// init
+buildZoneRow();
+buildLegend();
+loadToday();
+</script>
+</body>
+</html>
