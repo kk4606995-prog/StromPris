@@ -1,455 +1,474 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Strømpriser Norge – Live</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Markedsoversikt</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
-
     :root {
-      --bg:      #080b10;
-      --surface: #0f1318;
-      --card:    #141920;
-      --border:  #1e2530;
-      --text:    #dde3ed;
-      --muted:   #5a6478;
+      --bg:#050608; --surface:#0c0e12; --card:#111418; --border:#1c2028;
+      --text:#e2e8f0; --muted:#4a5568; --green:#22c55e; --red:#ef4444;
+      --oil:#f59e0b; --stock:#60a5fa; --power:#a78bfa;
     }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+    body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 15% 0%,rgba(245,158,11,0.04) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 85% 100%,rgba(96,165,250,0.04) 0%,transparent 60%),radial-gradient(ellipse 50% 40% at 50% 50%,rgba(167,139,250,0.03) 0%,transparent 60%);pointer-events:none;z-index:0;}
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Space Grotesk', sans-serif;
-      min-height: 100vh;
-      padding: 36px 20px 60px;
-    }
+    /* HOME */
+    #page-home{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;position:relative;z-index:1;}
+    .home-tag{font-family:'JetBrains Mono',monospace;font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:24px;display:flex;align-items:center;gap:8px;}
+    .home-tag::before,.home-tag::after{content:'';display:block;height:1px;width:32px;background:var(--border);}
+    .home-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(3.5rem,11vw,8.5rem);letter-spacing:0.04em;line-height:0.9;text-align:center;background:linear-gradient(135deg,#e2e8f0 0%,#94a3b8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:16px;}
+    .home-sub{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--muted);letter-spacing:0.1em;text-align:center;margin-bottom:56px;}
+    .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;max-width:900px;width:100%;}
+    .market-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:26px 26px 56px;cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;text-decoration:none;display:block;}
+    .market-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ca);transform:scaleX(0);transition:transform 0.3s;transform-origin:left;}
+    .market-card:hover{border-color:var(--ca);transform:translateY(-3px);}
+    .market-card:hover::before{transform:scaleX(1);}
+    .card-icon{font-size:1.8rem;margin-bottom:14px;display:block;}
+    .card-title{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:0.05em;color:var(--ca);margin-bottom:6px;}
+    .card-desc{font-size:0.81rem;color:var(--muted);line-height:1.6;}
+    .card-arrow{position:absolute;bottom:22px;right:22px;font-size:1.2rem;color:var(--muted);transition:all 0.2s;}
+    .market-card:hover .card-arrow{color:var(--ca);transform:translateX(4px);}
+    .ticker-preview{margin-top:16px;display:flex;gap:7px;flex-wrap:wrap;}
+    .ticker-tag{font-family:'JetBrains Mono',monospace;font-size:0.63rem;padding:3px 8px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);}
 
-    .header {
-      max-width: 980px; margin: 0 auto 28px;
-      display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 12px;
-    }
-    .header h1 { font-size: clamp(1.4rem, 3.5vw, 2rem); font-weight: 600; letter-spacing: -0.03em; }
-    .header p { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
-    .live-badge {
-      display: flex; align-items: center; gap: 7px;
-      background: #0f2518; border: 1px solid #1a4030; border-radius: 20px;
-      padding: 5px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: #34d399;
-    }
-    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.85)} }
+    /* INNER PAGES */
+    .page{display:none;min-height:100vh;position:relative;z-index:1;}
+    .page-header{display:flex;align-items:center;gap:16px;padding:22px 28px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:50;}
+    .back-btn{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 14px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:0.72rem;cursor:pointer;transition:all 0.15s;}
+    .back-btn:hover{color:var(--text);border-color:#333;}
+    .page-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:0.06em;color:var(--pc);}
+    .live-badge{margin-left:auto;display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--green);}
+    .ldot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    .page-content{max-width:980px;margin:0 auto;padding:28px 22px 60px;}
 
-    .tabs {
-      max-width: 980px; margin: 0 auto 20px;
-      display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; padding: 4px; width: fit-content;
-    }
-    .tab {
-      padding: 7px 18px; border-radius: 5px; border: none; background: transparent;
-      color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; cursor: pointer; transition: all .18s;
-    }
-    .tab.active { background: var(--card); color: var(--text); border: 1px solid var(--border); }
-    .tab:hover:not(.active) { color: var(--text); }
+    /* HERO */
+    .price-hero{background:var(--card);border:1px solid var(--border);border-top:2px solid var(--pc);border-radius:12px;padding:28px;margin-bottom:22px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:16px;}
+    .price-main{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.8rem,7vw,4.5rem);line-height:1;color:var(--pc);letter-spacing:0.02em;}
+    .price-label{font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
+    .price-chg{font-family:'JetBrains Mono',monospace;font-size:0.85rem;font-weight:500;padding:4px 10px;border-radius:4px;}
+    .up{color:var(--green);background:rgba(34,197,94,0.1);}
+    .down{color:var(--red);background:rgba(239,68,68,0.1);}
+    .price-meta{display:flex;gap:20px;flex-wrap:wrap;}
+    .pm-val{font-family:'JetBrains Mono',monospace;font-size:0.88rem;color:var(--text);}
+    .pm-lbl{font-size:0.63rem;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;}
 
-    .zone-row { max-width: 980px; margin: 0 auto 22px; display: flex; gap: 8px; flex-wrap: wrap; }
-    .zone-btn {
-      padding: 7px 16px; border-radius: 6px; border: 1px solid var(--border);
-      background: var(--surface); color: var(--muted); font-family: 'JetBrains Mono', monospace;
-      font-size: 0.74rem; cursor: pointer; transition: all .18s; position: relative;
-    }
-    .zone-btn::after {
-      content:''; position:absolute; bottom:-1px; left:12px; right:12px;
-      height:2px; border-radius:2px; background:var(--zc,#888); transform:scaleX(0); transition:transform .2s;
-    }
-    .zone-btn.on { color:var(--text); border-color:var(--zc,#888); background:color-mix(in srgb,var(--zc,#888) 8%,var(--surface)); }
-    .zone-btn.on::after { transform:scaleX(1); }
-    .zone-btn:hover { color:var(--text); }
+    /* ZONE BTNS (power) */
+    .zone-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+    .zone-btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:0.72rem;cursor:pointer;transition:all .18s;position:relative;}
+    .zone-btn::after{content:'';position:absolute;bottom:-1px;left:10px;right:10px;height:2px;border-radius:2px;background:var(--zc,#888);transform:scaleX(0);transition:transform .2s;}
+    .zone-btn.on{color:var(--text);border-color:var(--zc,#888);background:color-mix(in srgb,var(--zc,#888) 8%,var(--surface));}
+    .zone-btn.on::after{transform:scaleX(1);}
 
-    .stat-grid { max-width: 980px; margin: 0 auto 22px; display: grid; grid-template-columns: repeat(auto-fill,minmax(170px,1fr)); gap: 10px; }
-    .stat-card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px 16px; transition:opacity .3s; }
-    .stat-card.dimmed { opacity:.28; }
-    .zone-label { font-family:'JetBrains Mono',monospace; font-size:.7rem; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
-    .zdot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-    .stat-price { font-size:1.4rem; font-weight:600; letter-spacing:-.03em; line-height:1; }
-    .stat-sub { font-size:.65rem; color:var(--muted); font-family:'JetBrains Mono',monospace; margin-top:4px; line-height:1.6; }
+    /* STAT CARDS */
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:22px;}
+    .stat-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;transition:opacity .3s;}
+    .stat-card.dimmed{opacity:.25;}
+    .zone-label{font-family:'JetBrains Mono',monospace;font-size:0.68rem;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+    .zdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    .stat-price-big{font-size:1.3rem;font-weight:600;letter-spacing:-.02em;line-height:1;}
+    .stat-sub{font-size:0.63rem;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.6;}
 
-    .chart-wrap { max-width:980px; margin:0 auto; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:28px 18px 20px; }
-    canvas { width:100%!important; display:block; }
+    /* STOCKS */
+    .stocks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:22px;}
+    .stock-tile{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;transition:border-color 0.2s;cursor:pointer;}
+    .stock-tile:hover{border-color:var(--stock);}
+    .st-sym{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:0.05em;color:var(--stock);}
+    .st-name{font-size:0.7rem;color:var(--muted);margin-bottom:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .st-price{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--text);font-weight:500;}
+    .st-chg{font-family:'JetBrains Mono',monospace;font-size:0.72rem;margin-top:4px;}
 
-    .legend { max-width:980px; margin:16px auto 0; display:flex; flex-wrap:wrap; gap:16px; justify-content:center; }
-    .leg-item { display:flex; align-items:center; gap:7px; font-size:.73rem; color:var(--muted); cursor:pointer; transition:color .15s; }
-    .leg-item.on { color:var(--text); }
-    .leg-dot { width:9px; height:9px; border-radius:50%; }
+    /* CHART */
+    .chart-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px 18px 14px;margin-bottom:18px;}
+    .chart-lbl{font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:14px;}
+    canvas{width:100%!important;display:block;}
 
-    .status { max-width:980px; margin:0 auto 18px; font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--muted); min-height:18px; }
-    .status.err { color:#f87171; }
-
-    #tooltip {
-      position:fixed; background:#1a2030; border:1px solid #2a3345; border-radius:7px;
-      padding:10px 14px; font-family:'JetBrains Mono',monospace; font-size:.72rem;
-      pointer-events:none; opacity:0; z-index:200; transition:opacity .12s; min-width:150px;
-    }
-    #tooltip.show { opacity:1; }
-    .tt-head { color:var(--muted); margin-bottom:7px; font-size:.67rem; text-transform:uppercase; letter-spacing:.06em; }
-    .tt-row { display:flex; justify-content:space-between; gap:14px; margin-top:3px; align-items:center; }
-    .tt-name { display:flex; align-items:center; gap:6px; }
-    .tt-d { width:7px; height:7px; border-radius:50%; }
-    .tt-val { color:var(--text); font-weight:500; }
-
-    footer { max-width:980px; margin:28px auto 0; font-size:.68rem; color:var(--muted); font-family:'JetBrains Mono',monospace; text-align:center; }
-    footer a { color:var(--muted); }
+    .sbar{font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--muted);text-align:center;padding:8px;}
+    .sbar.err{color:var(--red);}
+    .spin{display:inline-block;width:13px;height:13px;border:2px solid var(--border);border-top-color:#888;border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle;margin-right:6px;}
+    @keyframes sp{to{transform:rotate(360deg);}}
+    #tooltip{position:fixed;background:#1a2030;border:1px solid #2a3345;border-radius:6px;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:0.7rem;pointer-events:none;opacity:0;z-index:300;transition:opacity .1s;}
+    #tooltip.show{opacity:1;}
   </style>
 </head>
 <body>
 
-<div class="header">
-  <div>
-    <h1>Strømpriser Norge</h1>
-    <p id="subtitle">Laster data…</p>
+<!-- ══ FORSIDE ══ -->
+<div id="page-home">
+  <div class="home-tag">Live markedsdata</div>
+  <div class="home-title">MARKEDS<br>OVERSIKT</div>
+  <div class="home-sub">Velg hva du vil følge med på</div>
+  <div class="card-grid">
+
+    <a class="market-card" style="--ca:var(--power)" onclick="showPage('power')">
+      <span class="card-icon">⚡</span>
+      <div class="card-title">Strømpris</div>
+      <div class="card-desc">Spotpris i dag og siste 7 dager for alle 5 norske prissoner.</div>
+      <div class="ticker-preview">
+        <span class="ticker-tag">NO1</span><span class="ticker-tag">NO2</span><span class="ticker-tag">NO3</span><span class="ticker-tag">NO4</span><span class="ticker-tag">NO5</span>
+      </div>
+      <span class="card-arrow">→</span>
+    </a>
+
+    <a class="market-card" style="--ca:var(--oil)" onclick="showPage('oil')">
+      <span class="card-icon">🛢️</span>
+      <div class="card-title">Oljepris</div>
+      <div class="card-desc">Brent og WTI crude oil. Daglig utvikling og 30-dagers historikk.</div>
+      <div class="ticker-preview">
+        <span class="ticker-tag">BRENT</span><span class="ticker-tag">WTI</span><span class="ticker-tag">USD/fat</span>
+      </div>
+      <span class="card-arrow">→</span>
+    </a>
+
+    <a class="market-card" style="--ca:var(--stock)" onclick="showPage('stock')">
+      <span class="card-icon">📈</span>
+      <div class="card-title">Aksjer</div>
+      <div class="card-desc">Norske og internasjonale aksjer. Klikk en aksje for kursgraf.</div>
+      <div class="ticker-preview">
+        <span class="ticker-tag">EQNR</span><span class="ticker-tag">DNB</span><span class="ticker-tag">AAPL</span><span class="ticker-tag">TSLA</span>
+      </div>
+      <span class="card-arrow">→</span>
+    </a>
+
   </div>
-  <div class="live-badge"><span class="live-dot"></span>LIVE · hvakosterstrommen.no</div>
 </div>
 
-<div class="tabs">
-  <button class="tab active" data-view="today">I dag</button>
-  <button class="tab" data-view="week">7 dager</button>
+<!-- ══ STRØM ══ -->
+<div id="page-power" class="page" style="--pc:var(--power)">
+  <div class="page-header">
+    <button class="back-btn" onclick="showPage('home')">← Tilbake</button>
+    <div class="page-title">STRØMPRIS</div>
+    <div class="live-badge"><span class="ldot"></span>LIVE · hvakosterstrommen.no</div>
+  </div>
+  <div class="page-content">
+    <div id="power-status" class="sbar"><span class="spin"></span>Henter strømpriser…</div>
+    <div class="tabs" style="display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px;width:fit-content;margin-bottom:18px;">
+      <button class="zone-btn on" id="tab-today" onclick="switchPowerTab('today')" style="--zc:var(--power)">I dag</button>
+      <button class="zone-btn" id="tab-week" onclick="switchPowerTab('week')" style="--zc:var(--power)">7 dager</button>
+    </div>
+    <div class="zone-row" id="zone-row"></div>
+    <div class="stat-grid" id="power-stat-grid"></div>
+    <div class="chart-box" id="power-chart-box" style="display:none">
+      <div class="chart-lbl">Spotpris (øre/kWh)</div>
+      <canvas id="power-chart" height="200"></canvas>
+    </div>
+    <div class="sbar" id="power-src"></div>
+  </div>
 </div>
 
-<div class="zone-row" id="zoneRow"></div>
-<div class="status" id="status"></div>
-<div class="stat-grid" id="statGrid"></div>
-
-<div class="chart-wrap">
-  <canvas id="chart"></canvas>
+<!-- ══ OLJE ══ -->
+<div id="page-oil" class="page" style="--pc:var(--oil)">
+  <div class="page-header">
+    <button class="back-btn" onclick="showPage('home')">← Tilbake</button>
+    <div class="page-title">OLJEPRIS</div>
+    <div class="live-badge"><span class="ldot"></span>LIVE</div>
+  </div>
+  <div class="page-content">
+    <div id="oil-status" class="sbar"><span class="spin"></span>Henter oljepriser…</div>
+    <div class="price-hero" id="oil-hero" style="display:none">
+      <div>
+        <div class="price-label">Brent Crude · USD per fat</div>
+        <div class="price-main" id="ob-price">—</div>
+        <span class="price-chg" id="ob-chg">—</span>
+      </div>
+      <div class="price-meta">
+        <div><div class="pm-val" id="wti-price">—</div><div class="pm-lbl">WTI Crude</div></div>
+        <div><div class="pm-val" id="oil-upd">—</div><div class="pm-lbl">Dato</div></div>
+      </div>
+    </div>
+    <div class="chart-box" id="oil-chart-box" style="display:none">
+      <div class="chart-lbl">Brent crude — siste 30 dager (USD/fat)</div>
+      <canvas id="oil-chart" height="200"></canvas>
+    </div>
+    <div class="sbar" id="oil-src"></div>
+  </div>
 </div>
-<div class="legend" id="legend"></div>
+
+<!-- ══ AKSJER ══ -->
+<div id="page-stock" class="page" style="--pc:var(--stock)">
+  <div class="page-header">
+    <button class="back-btn" onclick="showPage('home')">← Tilbake</button>
+    <div class="page-title">AKSJER</div>
+    <div class="live-badge"><span class="ldot"></span>LIVE</div>
+  </div>
+  <div class="page-content">
+    <div id="stock-status" class="sbar"><span class="spin"></span>Henter aksjepriser…</div>
+    <div class="stocks-grid" id="stocks-grid"></div>
+    <div class="chart-box" id="stock-chart-box" style="display:none">
+      <div class="chart-lbl" id="stock-chart-lbl">Kursutvikling</div>
+      <canvas id="stock-chart" height="200"></canvas>
+    </div>
+    <div class="sbar" id="stock-src"></div>
+  </div>
+</div>
+
 <div id="tooltip"></div>
 
-<footer>
-  Data levert av <a href="https://www.hvakosterstrommen.no/strompris-api" target="_blank">hvakosterstrommen.no</a>
-  &nbsp;·&nbsp; Spotpris ekskl. MVA og nettleie &nbsp;·&nbsp; Automatisk oppdatering hvert 5. min
-</footer>
-
 <script>
-const ZONES = [
-  { id:'NO1', short:'Øst-Norge',  color:'#f87171' },
-  { id:'NO2', short:'Sør-Norge',  color:'#34d399' },
-  { id:'NO3', short:'Midt-Norge', color:'#fbbf24' },
-  { id:'NO4', short:'Nord-Norge', color:'#60a5fa' },
-  { id:'NO5', short:'Vest-Norge', color:'#c084fc' },
+// ══ NAV ══
+function showPage(n) {
+  document.getElementById('page-home').style.display='none';
+  document.querySelectorAll('.page').forEach(p=>p.style.display='none');
+  const el=document.getElementById('page-'+n);
+  if(el){el.style.display='block';}else{document.getElementById('page-home').style.display='flex';}
+  window.scrollTo(0,0);
+  if(n==='power'&&!powerLoaded) loadPower();
+  if(n==='oil'&&!oilLoaded) loadOil();
+  if(n==='stock'&&!stockLoaded) loadStocks();
+}
+showPage('home');
+
+// ══════════════════════════════
+//  STRØM
+// ══════════════════════════════
+const ZONES=[
+  {id:'NO1',short:'Øst',color:'#f87171'},
+  {id:'NO2',short:'Sør',color:'#34d399'},
+  {id:'NO3',short:'Midt',color:'#fbbf24'},
+  {id:'NO4',short:'Nord',color:'#60a5fa'},
+  {id:'NO5',short:'Vest',color:'#c084fc'},
 ];
+let powerLoaded=false, powerView='today', powerData={}, activeZones=new Set(ZONES.map(z=>z.id)), powerHover=null;
 
-let activeZones = new Set(ZONES.map(z => z.id));
-let currentView = 'today';
-let allData = {};   // { NO1: [{t, nok}, ...], ... }
-let hoverIdx = null;
-
-// ── API ──
-function apiUrl(dt, zoneId) {
-  const y = dt.getFullYear();
-  const m = String(dt.getMonth()+1).padStart(2,'0');
-  const d = String(dt.getDate()).padStart(2,'0');
-  return `https://www.hvakosterstrommen.no/api/v1/prices/${y}/${m}-${d}_${zoneId}.json`;
+function powerApi(dt,zone){
+  const y=dt.getFullYear(),m=String(dt.getMonth()+1).padStart(2,'0'),d=String(dt.getDate()).padStart(2,'0');
+  return `https://www.hvakosterstrommen.no/api/v1/prices/${y}/${m}-${d}_${zone}.json`;
 }
 
-async function fetchDay(dt, zoneId) {
-  const r = await fetch(apiUrl(dt, zoneId));
-  if (!r.ok) throw new Error(r.status);
-  return r.json();
+async function loadPower(){
+  powerLoaded=true;
+  buildZoneRow();
+  if(powerView==='today') await fetchPowerToday();
+  else await fetchPowerWeek();
 }
 
-function daysAgo(n) {
-  const d = new Date(); d.setDate(d.getDate() - n); return d;
-}
-
-// ── LOAD ──
-async function loadToday() {
-  setStatus('Henter dagens priser…');
-  const dt = new Date();
-  allData = {};
-  const errs = [];
-  await Promise.all(ZONES.map(async z => {
-    try {
-      const rows = await fetchDay(dt, z.id);
-      allData[z.id] = rows.map(r => ({ t: r.time_start, nok: r.NOK_per_kWh }));
-    } catch(e) { errs.push(z.id); }
+async function fetchPowerToday(){
+  document.getElementById('power-status').innerHTML='<span class="spin"></span>Henter dagens priser…';
+  document.getElementById('power-status').style.display='block';
+  const dt=new Date(); powerData={};
+  await Promise.all(ZONES.map(async z=>{
+    try{const r=await fetch(powerApi(dt,z.id));const d=await r.json();powerData[z.id]=d.map(x=>({t:x.time_start,nok:x.NOK_per_kWh}));}catch(e){}
   }));
-  setStatus(errs.length ? 'Feil ved henting: ' + errs.join(', ') : '', errs.length > 0);
-  updateSubtitle('i dag');
-  renderCards(); draw();
+  document.getElementById('power-status').style.display='none';
+  document.getElementById('power-src').textContent='Kilde: hvakosterstrommen.no · Oppdateres automatisk';
+  renderPowerCards(); drawPowerChart();
 }
 
-async function loadWeek() {
-  setStatus('Henter 7 dagers data…');
-  allData = {};
-  await Promise.all(ZONES.map(async z => {
-    const rows = [];
-    for (let i = 6; i >= 0; i--) {
-      try {
-        const day = await fetchDay(daysAgo(i), z.id);
-        rows.push(...day.map(r => ({ t: r.time_start, nok: r.NOK_per_kWh })));
-      } catch(e) { /* dag mangler */ }
-    }
-    allData[z.id] = rows;
+async function fetchPowerWeek(){
+  document.getElementById('power-status').innerHTML='<span class="spin"></span>Henter 7 dagers data…';
+  document.getElementById('power-status').style.display='block';
+  powerData={};
+  await Promise.all(ZONES.map(async z=>{
+    const rows=[];
+    for(let i=6;i>=0;i--){try{const dt=new Date();dt.setDate(dt.getDate()-i);const r=await fetch(powerApi(dt,z.id));const d=await r.json();rows.push(...d.map(x=>({t:x.time_start,nok:x.NOK_per_kWh})));}catch(e){}}
+    powerData[z.id]=rows;
   }));
-  const noData = Object.values(allData).every(a => !a.length);
-  setStatus(noData ? 'Ingen data tilgjengelig' : '', noData);
-  updateSubtitle('siste 7 dager');
-  renderCards(); draw();
+  document.getElementById('power-status').style.display='none';
+  document.getElementById('power-src').textContent='Kilde: hvakosterstrommen.no · Siste 7 dager';
+  renderPowerCards(); drawPowerChart();
 }
 
-function setStatus(msg, isErr=false) {
-  const el = document.getElementById('status');
-  el.textContent = msg;
-  el.className = 'status' + (isErr ? ' err' : '');
+function switchPowerTab(v){
+  powerView=v;
+  document.getElementById('tab-today').classList.toggle('on',v==='today');
+  document.getElementById('tab-week').classList.toggle('on',v==='week');
+  if(v==='today') fetchPowerToday(); else fetchPowerWeek();
 }
 
-function updateSubtitle(period) {
-  const t = new Date().toLocaleTimeString('no-NO', {hour:'2-digit', minute:'2-digit'});
-  document.getElementById('subtitle').textContent = `Spotpris ${period} · oppdatert ${t}`;
-}
-
-// ── ZONE BUTTONS ──
-function buildZoneRow() {
-  const row = document.getElementById('zoneRow');
-  const makeBtn = (label, id, color) => {
-    const b = document.createElement('button');
-    b.className = 'zone-btn on';
-    b.textContent = label;
-    b.dataset.id = id;
-    b.style.setProperty('--zc', color);
-    b.addEventListener('click', () => {
-      if (id === 'alle') {
-        activeZones = activeZones.size === ZONES.length
-          ? new Set([ZONES[0].id])
-          : new Set(ZONES.map(z => z.id));
-      } else {
-        if (activeZones.has(id)) { if (activeZones.size > 1) activeZones.delete(id); }
-        else activeZones.add(id);
-      }
-      syncUI(); renderCards(); draw();
-    });
-    return b;
-  };
-  row.appendChild(makeBtn('Alle soner', 'alle', '#dde3ed'));
-  ZONES.forEach(z => row.appendChild(makeBtn(z.id, z.id, z.color)));
-}
-
-function syncUI() {
-  const allOn = activeZones.size === ZONES.length;
-  document.querySelectorAll('.zone-btn').forEach(b => {
-    b.classList.toggle('on', b.dataset.id === 'alle' ? allOn : activeZones.has(b.dataset.id));
+function buildZoneRow(){
+  const row=document.getElementById('zone-row');
+  row.innerHTML='';
+  const all=document.createElement('button');
+  all.className='zone-btn on'; all.textContent='Alle'; all.style.setProperty('--zc','#e2e8f0');
+  all.onclick=()=>{activeZones=activeZones.size===ZONES.length?new Set([ZONES[0].id]):new Set(ZONES.map(z=>z.id));syncZoneBtns();renderPowerCards();drawPowerChart();};
+  row.appendChild(all);
+  ZONES.forEach(z=>{
+    const b=document.createElement('button');
+    b.className='zone-btn on'; b.textContent=z.id; b.dataset.id=z.id; b.style.setProperty('--zc',z.color);
+    b.onclick=()=>{if(activeZones.has(z.id)){if(activeZones.size>1)activeZones.delete(z.id);}else activeZones.add(z.id);syncZoneBtns();renderPowerCards();drawPowerChart();};
+    row.appendChild(b);
   });
-  document.querySelectorAll('.leg-item').forEach(li => li.classList.toggle('on', activeZones.has(li.dataset.id)));
 }
-
-// ── STAT CARDS ──
-function renderCards() {
-  const grid = document.getElementById('statGrid');
-  grid.innerHTML = '';
-  ZONES.forEach(z => {
-    const rows = allData[z.id];
-    const card = document.createElement('div');
-    card.className = 'stat-card' + (activeZones.has(z.id) ? '' : ' dimmed');
-
-    let priceHtml = `<span style="color:var(--muted);font-size:.9rem">—</span>`;
-    let subHtml = '';
-
-    if (rows && rows.length) {
-      if (currentView === 'today') {
-        const hr = new Date().getHours();
-        const cur = rows.find(r => new Date(r.t).getHours() === hr);
-        if (cur) {
-          priceHtml = `<span style="color:${z.color}">${(cur.nok*100).toFixed(1)}</span>`;
-          const hi = Math.max(...rows.map(r=>r.nok*100)).toFixed(0);
-          const lo = Math.min(...rows.map(r=>r.nok*100)).toFixed(0);
-          subHtml = `øre/kWh nå<br>↑ ${hi} &nbsp; ↓ ${lo} øre`;
-        }
+function syncZoneBtns(){
+  const allOn=activeZones.size===ZONES.length;
+  document.querySelectorAll('#zone-row .zone-btn').forEach(b=>{
+    if(!b.dataset.id) b.classList.toggle('on',allOn);
+    else b.classList.toggle('on',activeZones.has(b.dataset.id));
+  });
+}
+function renderPowerCards(){
+  const grid=document.getElementById('power-stat-grid'); grid.innerHTML='';
+  const now=new Date();
+  ZONES.forEach(z=>{
+    const rows=powerData[z.id];
+    const card=document.createElement('div');
+    card.className='stat-card'+(activeZones.has(z.id)?'':' dimmed');
+    let ph='<span style="color:var(--muted)">—</span>',sub='';
+    if(rows&&rows.length){
+      if(powerView==='today'){
+        const cur=rows.find(r=>new Date(r.t).getHours()===now.getHours());
+        if(cur){ph=`<span style="color:${z.color}">${(cur.nok*100).toFixed(1)}</span>`;
+          const hi=Math.max(...rows.map(r=>r.nok*100)).toFixed(0),lo=Math.min(...rows.map(r=>r.nok*100)).toFixed(0);
+          sub=`øre/kWh nå<br>↑${hi} ↓${lo} øre`;}
       } else {
-        const avg = rows.reduce((s,r)=>s+r.nok,0)/rows.length;
-        priceHtml = `<span style="color:${z.color}">${(avg*100).toFixed(1)}</span>`;
-        subHtml = 'øre/kWh snitt (7d)';
+        const avg=rows.reduce((s,r)=>s+r.nok,0)/rows.length;
+        ph=`<span style="color:${z.color}">${(avg*100).toFixed(1)}</span>`;sub='øre/kWh snitt (7d)';
       }
     }
-
-    card.innerHTML = `
-      <div class="zone-label">
-        <span class="zdot" style="background:${z.color}"></span>
-        <span style="color:${z.color}">${z.id}</span>
-        <span style="color:var(--muted)">${z.short}</span>
-      </div>
-      <div class="stat-price">${priceHtml}</div>
-      <div class="stat-sub">${subHtml}</div>`;
+    card.innerHTML=`<div class="zone-label"><span class="zdot" style="background:${z.color}"></span><span style="color:${z.color}">${z.id}</span><span style="color:var(--muted)">${z.short}</span></div><div class="stat-price-big">${ph}</div><div class="stat-sub">${sub}</div>`;
     grid.appendChild(card);
   });
 }
-
-// ── LEGEND ──
-function buildLegend() {
-  const leg = document.getElementById('legend');
-  ZONES.forEach(z => {
-    const item = document.createElement('div');
-    item.className = 'leg-item on'; item.dataset.id = z.id;
-    item.innerHTML = `<span class="leg-dot" style="background:${z.color}"></span>${z.id} – ${z.short}`;
-    item.addEventListener('click', () => {
-      if (activeZones.has(z.id)) { if (activeZones.size > 1) activeZones.delete(z.id); }
-      else activeZones.add(z.id);
-      syncUI(); renderCards(); draw();
-    });
-    leg.appendChild(item);
+function drawPowerChart(){
+  const visible=ZONES.filter(z=>activeZones.has(z.id)&&powerData[z.id]?.length);
+  document.getElementById('power-chart-box').style.display=visible.length?'block':'none';
+  if(!visible.length) return;
+  const canvas=document.getElementById('power-chart');
+  const ctx=canvas.getContext('2d');
+  const DPR=devicePixelRatio||1,W=canvas.parentElement.clientWidth-36,H=200;
+  canvas.width=W*DPR;canvas.height=H*DPR;canvas.style.width=W+'px';canvas.style.height=H+'px';
+  ctx.scale(DPR,DPR);ctx.clearRect(0,0,W,H);
+  const PAD={top:10,right:16,bottom:38,left:54};
+  const pW=W-PAD.left-PAD.right,pH=H-PAD.top-PAD.bottom;
+  const labels=powerData[visible[0].id].map(r=>r.t),N=labels.length;
+  if(N<2)return;
+  const vals=visible.flatMap(z=>powerData[z.id].map(r=>r.nok*100));
+  const minV=Math.max(0,Math.floor(Math.min(...vals)/5)*5),maxV=Math.ceil(Math.max(...vals)/5)*5+5;
+  const xp=i=>PAD.left+(i/(N-1))*pW,yp=v=>PAD.top+pH-((v-minV)/(maxV-minV))*pH;
+  ctx.font=`10px 'JetBrains Mono',monospace`;
+  for(let i=0;i<=5;i++){const v=minV+((maxV-minV)/5)*i,y=yp(v);ctx.beginPath();ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+pW,y);ctx.stroke();ctx.fillStyle='#4a5568';ctx.textAlign='right';ctx.fillText(Math.round(v),PAD.left-4,y+3.5);}
+  const step=Math.ceil(N/(powerView==='today'?12:7));
+  ctx.fillStyle='#4a5568';ctx.textAlign='center';
+  for(let i=0;i<N;i+=step){const dt=new Date(labels[i]);const lbl=powerView==='today'?String(dt.getHours()).padStart(2,'0')+':00':`${dt.getDate()}/${dt.getMonth()+1}`;ctx.fillText(lbl,xp(i),PAD.top+pH+26);}
+  visible.forEach(z=>{
+    const pts=powerData[z.id].map((r,i)=>({x:xp(i),y:yp(r.nok*100)}));
+    ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.forEach(p=>ctx.lineTo(p.x,p.y));ctx.lineTo(pts[N-1].x,PAD.top+pH);ctx.lineTo(pts[0].x,PAD.top+pH);ctx.closePath();ctx.fillStyle=z.color+'14';ctx.fill();
+    ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.forEach(p=>ctx.lineTo(p.x,p.y));ctx.strokeStyle=z.color;ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.stroke();
   });
+  if(powerHover!==null&&powerHover>=0&&powerHover<N){
+    ctx.beginPath();ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.moveTo(xp(powerHover),PAD.top);ctx.lineTo(xp(powerHover),PAD.top+pH);ctx.stroke();
+    visible.forEach(z=>{const r=powerData[z.id][powerHover];if(!r)return;ctx.beginPath();ctx.arc(xp(powerHover),yp(r.nok*100),4.5,0,Math.PI*2);ctx.fillStyle=z.color;ctx.fill();ctx.strokeStyle='#050608';ctx.lineWidth=1.5;ctx.stroke();});
+  }
+  const tt=document.getElementById('tooltip');
+  canvas.onmousemove=e=>{
+    const rect=canvas.getBoundingClientRect(),mx=e.clientX-rect.left;
+    const idx=Math.round(((mx-PAD.left)/pW)*(N-1));
+    powerHover=(idx>=0&&idx<N)?idx:null;
+    if(powerHover!==null){
+      const dt=new Date(labels[powerHover]);
+      const lbl=powerView==='today'?`Kl. ${String(dt.getHours()).padStart(2,'0')}:00`:`${dt.getDate()}/${dt.getMonth()+1} ${String(dt.getHours()).padStart(2,'0')}:00`;
+      let html=`<div style="color:#4a5568;font-size:.65rem;margin-bottom:5px">${lbl}</div>`;
+      visible.forEach(z=>{const r=powerData[z.id][powerHover];if(!r)return;html+=`<div style="display:flex;justify-content:space-between;gap:12px;margin-top:2px"><span style="display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:${z.color};display:inline-block"></span>${z.id}</span><span style="color:var(--text)">${(r.nok*100).toFixed(1)} øre</span></div>`;});
+      tt.innerHTML=html;tt.classList.add('show');tt.style.left=(e.clientX+14)+'px';tt.style.top=(e.clientY-20)+'px';
+    } else tt.classList.remove('show');
+    drawPowerChart();
+  };
+  canvas.onmouseleave=()=>{powerHover=null;tt.classList.remove('show');drawPowerChart();};
+}
+setInterval(()=>{if(powerLoaded&&powerView==='today')fetchPowerToday();},5*60*1000);
+
+// ══════════════════════════════
+//  OLJE
+// ══════════════════════════════
+let oilLoaded=false;
+async function loadOil(){
+  oilLoaded=true;
+  const st=document.getElementById('oil-status');
+  try{
+    const r=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://stooq.com/q/d/l/?s=brn.f&i=d&l=32')}`);
+    const j=await r.json();
+    const prices=j.contents.trim().split('\n').slice(1).filter(l=>l.trim()).map(l=>{const c=l.split(',');return{date:c[0],close:parseFloat(c[4])};}).filter(p=>!isNaN(p.close));
+    if(!prices.length)throw new Error('ingen data');
+    const lat=prices[prices.length-1],prv=prices[prices.length-2];
+    const chg=lat.close-prv.close,pct=chg/prv.close*100;
+    document.getElementById('ob-price').textContent=`$${lat.close.toFixed(2)}`;
+    const ce=document.getElementById('ob-chg');ce.textContent=`${chg>=0?'+':''}${chg.toFixed(2)} (${pct.toFixed(2)}%)`;ce.className='price-chg '+(chg>=0?'up':'down');
+    document.getElementById('oil-upd').textContent=lat.date;
+    try{const wr=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://stooq.com/q/d/l/?s=cl.f&i=d&l=2')}`);const wj=await wr.json();const wl=wj.contents.trim().split('\n').slice(1).filter(l=>l.trim());if(wl.length){const wv=parseFloat(wl[wl.length-1].split(',')[4]);if(!isNaN(wv))document.getElementById('wti-price').textContent=`$${wv.toFixed(2)}`;}}catch(e){document.getElementById('wti-price').textContent='N/A';}
+    st.style.display='none';
+    document.getElementById('oil-hero').style.display='flex';
+    document.getElementById('oil-chart-box').style.display='block';
+    document.getElementById('oil-src').textContent='Kilde: Stooq.com (Brent/WTI futures) · Daglige sluttkurser';
+    drawLineChart('oil-chart',prices,'#f59e0b',p=>`$${p.close.toFixed(2)}/fat`,p=>p.close);
+  }catch(e){st.className='sbar err';st.textContent='Kunne ikke hente oljepriser. Prøv igjen.';}
 }
 
-// ── CHART ──
-const canvas = document.getElementById('chart');
-const ctx = canvas.getContext('2d');
-const PAD = { top:16, right:24, bottom:44, left:56 };
+// ══════════════════════════════
+//  AKSJER
+// ══════════════════════════════
+let stockLoaded=false;
+const TICKERS=[{sym:'EQNR',name:'Equinor ASA'},{sym:'DNB.OL',name:'DNB Bank'},{sym:'AAPL',name:'Apple Inc.'},{sym:'TSLA',name:'Tesla Inc.'},{sym:'MSFT',name:'Microsoft'},{sym:'NVDA',name:'NVIDIA'},{sym:'NEL.OL',name:'Nel ASA'},{sym:'YAR.OL',name:'Yara International'}];
 
-function draw() {
-  const visible = ZONES.filter(z => activeZones.has(z.id) && allData[z.id]?.length);
-  const DPR = devicePixelRatio || 1;
-  const W = canvas.parentElement.clientWidth - 36;
-  const H = Math.max(260, Math.min(400, W * 0.42));
-  canvas.width = W*DPR; canvas.height = H*DPR;
-  canvas.style.width = W+'px'; canvas.style.height = H+'px';
-  ctx.scale(DPR, DPR);
-  ctx.clearRect(0, 0, W, H);
-  if (!visible.length) return;
-
-  const pW = W - PAD.left - PAD.right;
-  const pH = H - PAD.top - PAD.bottom;
-  const labels = allData[visible[0].id].map(r => r.t);
-  const N = labels.length;
-  if (N < 2) return;
-
-  const vals = visible.flatMap(z => allData[z.id].map(r => r.nok*100));
-  const minV = Math.max(0, Math.floor(Math.min(...vals)/5)*5);
-  const maxV = Math.ceil(Math.max(...vals)/5)*5 + 5;
-
-  const xp = i => PAD.left + (i/(N-1))*pW;
-  const yp = v => PAD.top + pH - ((v-minV)/(maxV-minV))*pH;
-
-  ctx.font = `10px 'JetBrains Mono',monospace`;
-
-  // grid lines + y labels
-  for (let i = 0; i <= 5; i++) {
-    const v = minV + ((maxV-minV)/5)*i;
-    const y = yp(v);
-    ctx.beginPath(); ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
-    ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left+pW, y); ctx.stroke();
-    ctx.fillStyle = '#5a6478'; ctx.textAlign = 'right';
-    ctx.fillText(Math.round(v), PAD.left-6, y+3.5);
-  }
-
-  // x labels
-  const step = Math.ceil(N / (currentView==='today' ? 12 : 7));
-  ctx.fillStyle = '#5a6478'; ctx.textAlign = 'center';
-  for (let i = 0; i < N; i += step) {
-    const dt = new Date(labels[i]);
-    const lbl = currentView==='today'
-      ? String(dt.getHours()).padStart(2,'0')+':00'
-      : `${dt.getDate()}/${dt.getMonth()+1}`;
-    ctx.fillText(lbl, xp(i), PAD.top+pH+28);
-  }
-
-  // areas + lines
-  visible.forEach(z => {
-    const pts = allData[z.id].map((r,i) => ({ x:xp(i), y:yp(r.nok*100) }));
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    pts.forEach(p => ctx.lineTo(p.x, p.y));
-    ctx.lineTo(pts[pts.length-1].x, PAD.top+pH);
-    ctx.lineTo(pts[0].x, PAD.top+pH);
-    ctx.closePath();
-    ctx.fillStyle = z.color+'14'; ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    pts.forEach(p => ctx.lineTo(p.x, p.y));
-    ctx.strokeStyle = z.color; ctx.lineWidth = 1.8; ctx.lineJoin = 'round'; ctx.stroke();
-  });
-
-  // now-line (today only)
-  if (currentView === 'today') {
-    const hr = new Date().getHours();
-    const idx = allData[visible[0].id]?.findIndex(r => new Date(r.t).getHours() === hr);
-    if (idx >= 0) {
-      ctx.beginPath(); ctx.strokeStyle = 'rgba(255,255,255,0.16)'; ctx.lineWidth = 1;
-      ctx.setLineDash([3,4]); ctx.moveTo(xp(idx),PAD.top); ctx.lineTo(xp(idx),PAD.top+pH);
-      ctx.stroke(); ctx.setLineDash([]);
-    }
-  }
-
-  // hover
-  if (hoverIdx !== null && hoverIdx >= 0 && hoverIdx < N) {
-    ctx.beginPath(); ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
-    ctx.moveTo(xp(hoverIdx),PAD.top); ctx.lineTo(xp(hoverIdx),PAD.top+pH); ctx.stroke();
-    visible.forEach(z => {
-      const r = allData[z.id][hoverIdx]; if (!r) return;
-      ctx.beginPath(); ctx.arc(xp(hoverIdx), yp(r.nok*100), 4.5, 0, Math.PI*2);
-      ctx.fillStyle = z.color; ctx.fill();
-      ctx.strokeStyle = '#080b10'; ctx.lineWidth = 1.5; ctx.stroke();
-    });
-  }
+async function fetchYahoo(sym,range,interval){
+  const url=`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=${interval}&range=${range}`;
+  const r=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+  const j=await r.json();return JSON.parse(j.contents);
 }
 
-// tooltip
-canvas.addEventListener('mousemove', e => {
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const W = canvas.parentElement.clientWidth - 36;
-  const pW = W - PAD.left - PAD.right;
-  const visible = ZONES.filter(z => activeZones.has(z.id) && allData[z.id]?.length);
-  if (!visible.length) return;
-  const N = allData[visible[0].id].length;
-  const idx = Math.round(((mx-PAD.left)/pW)*(N-1));
-  hoverIdx = (idx>=0 && idx<N) ? idx : null;
-
-  const tt = document.getElementById('tooltip');
-  if (hoverIdx !== null) {
-    const dt = new Date(allData[visible[0].id][hoverIdx].t);
-    const lbl = currentView==='today'
-      ? `Kl. ${String(dt.getHours()).padStart(2,'0')}:00`
-      : `${dt.toLocaleDateString('no-NO',{day:'2-digit',month:'short'})} ${String(dt.getHours()).padStart(2,'0')}:00`;
-    let html = `<div class="tt-head">${lbl}</div>`;
-    visible.forEach(z => {
-      const r = allData[z.id][hoverIdx]; if (!r) return;
-      html += `<div class="tt-row">
-        <span class="tt-name"><span class="tt-d" style="background:${z.color}"></span>${z.id}</span>
-        <span class="tt-val">${(r.nok*100).toFixed(1)} øre</span>
-      </div>`;
-    });
-    tt.innerHTML = html; tt.classList.add('show');
-    tt.style.left = (e.clientX+16)+'px'; tt.style.top = (e.clientY-24)+'px';
-  } else { tt.classList.remove('show'); }
-  draw();
-});
-canvas.addEventListener('mouseleave', () => {
-  hoverIdx = null;
-  document.getElementById('tooltip').classList.remove('show');
-  draw();
-});
-
-// tabs
-document.querySelectorAll('.tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentView = btn.dataset.view;
-    hoverIdx = null;
-    currentView === 'today' ? loadToday() : loadWeek();
+async function loadStocks(){
+  stockLoaded=true;
+  const st=document.getElementById('stock-status'),grid=document.getElementById('stocks-grid');
+  grid.innerHTML='';
+  TICKERS.forEach(t=>{
+    const id=t.sym.replace('.','_'),tile=document.createElement('div');
+    tile.className='stock-tile';
+    tile.innerHTML=`<div class="st-sym">${t.sym.replace('.OL','')}</div><div class="st-name">${t.name}</div><div class="st-price" id="p-${id}">—</div><div class="st-chg" id="c-${id}">laster…</div>`;
+    tile.addEventListener('click',()=>loadStockChart(t.sym,t.name));
+    grid.appendChild(tile);
   });
-});
+  let done=0;
+  await Promise.all(TICKERS.map(async t=>{
+    const id=t.sym.replace('.','_');
+    try{const d=await fetchYahoo(t.sym,'1d','5m');const m=d.chart.result[0].meta;const p=m.regularMarketPrice,prev=m.previousClose||m.chartPreviousClose;const chg=p-prev,pct=chg/prev*100;const cur=m.currency==='NOK'?'kr':'$';document.getElementById('p-'+id).textContent=`${cur}${p.toFixed(2)}`;const ce=document.getElementById('c-'+id);ce.textContent=`${chg>=0?'+':''}${chg.toFixed(2)} (${pct.toFixed(2)}%)`;ce.className='st-chg '+(chg>=0?'up':'down');}
+    catch(e){document.getElementById('p-'+id).textContent='N/A';document.getElementById('c-'+id).textContent='—';}
+    if(++done===TICKERS.length){st.style.display='none';document.getElementById('stock-src').textContent='Kilde: Yahoo Finance · Klikk en aksje for kurshistorikk';}
+  }));
+}
 
-window.addEventListener('resize', draw);
+async function loadStockChart(sym,name){
+  const box=document.getElementById('stock-chart-box');
+  box.style.display='block';document.getElementById('stock-chart-lbl').textContent=`${name} — siste 30 dager`;
+  box.scrollIntoView({behavior:'smooth',block:'nearest'});
+  const canvas=document.getElementById('stock-chart'),ctx=canvas.getContext('2d');
+  const DPR=devicePixelRatio||1,W=canvas.parentElement.clientWidth-36,H=200;
+  canvas.width=W*DPR;canvas.height=H*DPR;canvas.style.width=W+'px';canvas.style.height=H+'px';
+  ctx.scale(DPR,DPR);ctx.fillStyle='#111418';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#4a5568';ctx.font=`12px 'JetBrains Mono',monospace`;ctx.textAlign='center';ctx.fillText('Laster…',W/2,H/2);
+  try{
+    const d=await fetchYahoo(sym,'1mo','1d');
+    const res=d.chart.result[0];
+    const prices=res.timestamp.map((t,i)=>({date:new Date(t*1000).toLocaleDateString('no-NO',{month:'short',day:'numeric'}),close:res.indicators.quote[0].close[i]})).filter(p=>p.close!==null&&!isNaN(p.close));
+    const cur=res.meta.currency==='NOK'?'kr':'$';
+    const isUp=prices[prices.length-1].close>=prices[0].close;
+    drawLineChart('stock-chart',prices,isUp?'#22c55e':'#ef4444',p=>`${cur}${p.close.toFixed(2)}`,p=>p.close);
+  }catch(e){ctx.clearRect(0,0,W,H);ctx.fillStyle='#ef4444';ctx.textAlign='center';ctx.fillText('Kunne ikke laste historikk',W/2,H/2);}
+}
 
-// auto-refresh every 5 min
-setInterval(() => { currentView==='today' ? loadToday() : loadWeek(); }, 5*60*1000);
-
-// init
-buildZoneRow();
-buildLegend();
-loadToday();
+// ══ FELLES CHART ══
+function drawLineChart(canvasId,prices,color,ttFn,valFn){
+  const canvas=document.getElementById(canvasId),ctx=canvas.getContext('2d');
+  const DPR=devicePixelRatio||1,W=canvas.parentElement.clientWidth-36,H=200;
+  canvas.width=W*DPR;canvas.height=H*DPR;canvas.style.width=W+'px';canvas.style.height=H+'px';
+  ctx.scale(DPR,DPR);ctx.clearRect(0,0,W,H);
+  const PAD={top:10,right:16,bottom:36,left:58};
+  const pW=W-PAD.left-PAD.right,pH=H-PAD.top-PAD.bottom;
+  const vals=prices.map(valFn),minV=Math.min(...vals)*0.995,maxV=Math.max(...vals)*1.005,N=prices.length;
+  const xp=i=>PAD.left+(i/(N-1))*pW,yp=v=>PAD.top+pH-((v-minV)/(maxV-minV))*pH;
+  ctx.font=`10px 'JetBrains Mono',monospace`;
+  for(let i=0;i<=4;i++){const v=minV+((maxV-minV)/4)*i,y=yp(v);ctx.beginPath();ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+pW,y);ctx.stroke();ctx.fillStyle='#4a5568';ctx.textAlign='right';ctx.fillText(ttFn({close:v}).split('/')[0],PAD.left-4,y+3.5);}
+  ctx.fillStyle='#4a5568';ctx.textAlign='center';
+  for(let i=0;i<N;i+=Math.ceil(N/5))ctx.fillText(prices[i].date,xp(i),PAD.top+pH+24);
+  const pts=prices.map((p,i)=>({x:xp(i),y:yp(valFn(p))}));
+  const grad=ctx.createLinearGradient(0,PAD.top,0,PAD.top+pH);grad.addColorStop(0,color+'33');grad.addColorStop(1,color+'00');
+  ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.forEach(p=>ctx.lineTo(p.x,p.y));ctx.lineTo(pts[N-1].x,PAD.top+pH);ctx.lineTo(pts[0].x,PAD.top+pH);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+  ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.forEach(p=>ctx.lineTo(p.x,p.y));ctx.strokeStyle=color;ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();
+  const tt=document.getElementById('tooltip');
+  canvas.onmousemove=e=>{const rect=canvas.getBoundingClientRect(),mx=e.clientX-rect.left;const idx=Math.round(((mx-PAD.left)/pW)*(N-1));if(idx>=0&&idx<N){tt.innerHTML=`<span style="color:${color}">${prices[idx].date}</span><br>${ttFn(prices[idx])}`;tt.classList.add('show');tt.style.left=(e.clientX+14)+'px';tt.style.top=(e.clientY-20)+'px';}else tt.classList.remove('show');};
+  canvas.onmouseleave=()=>tt.classList.remove('show');
+}
 </script>
 </body>
 </html>
